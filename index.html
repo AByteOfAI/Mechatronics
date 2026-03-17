@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DC Motor Position Control — Mechatronics Project</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@300;500;700;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0c0e12;
+      --surface: #13161c;
+      --surface2: #1a1e27;
+      --border: #252a35;
+      --text: #dfe3ec;
+      --text-dim: #7e8a9e;
+      --accent: #4aa8ff;
+      --accent2: #6fddca;
+      --accent3: #ff6b6b;
+      --glow: rgba(74, 168, 255, 0.08);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      font-weight: 300;
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    /* grain overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 4rem 2rem;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(74,168,255,0.12) 0%, transparent 70%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -55%);
+      pointer-events: none;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--accent);
+      letter-spacing: 0.05em;
+      margin-bottom: 2rem;
+      animation: fadeIn 0.8s ease both;
+    }
+
+    .tag::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+    }
+
+    h1 {
+      font-size: clamp(2.4rem, 6vw, 4.5rem);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 1.5rem;
+      animation: fadeIn 0.8s 0.1s ease both;
+    }
+
+    h1 span {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      font-size: 1.15rem;
+      color: var(--text-dim);
+      max-width: 600px;
+      margin-bottom: 2.5rem;
+      animation: fadeIn 0.8s 0.2s ease both;
+    }
+
+    .hero-links {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      animation: fadeIn 0.8s 0.3s ease both;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.75rem;
+      border-radius: 8px;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 500;
+      font-size: 0.95rem;
+      text-decoration: none;
+      transition: all 0.25s ease;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: var(--bg);
+    }
+    .btn-primary:hover {
+      background: #6cbfff;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(74,168,255,0.25);
+    }
+
+    .btn-outline {
+      border: 1px solid var(--border);
+      color: var(--text);
+      background: transparent;
+    }
+    .btn-outline:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .scroll-hint {
+      position: absolute;
+      bottom: 2rem;
+      animation: float 2.5s ease-in-out infinite;
+      color: var(--text-dim);
+      font-size: 0.8rem;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 0.1em;
+    }
+
+    /* Sections */
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 0 2rem;
+    }
+
+    section {
+      padding: 5rem 0;
+    }
+
+    .section-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 0.75rem;
+    }
+
+    h2 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      letter-spacing: -0.02em;
+    }
+
+    p + p { margin-top: 1rem; }
+
+    /* Architecture diagram */
+    .arch-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2.5rem;
+      margin: 2rem 0;
+      overflow-x: auto;
+    }
+
+    .arch-box pre {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--accent2);
+      line-height: 1.6;
+      white-space: pre;
+    }
+
+    /* Cards grid */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+      margin-top: 2rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.75rem;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .card:hover {
+      border-color: var(--accent);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+    }
+
+    .card:hover::before { opacity: 1; }
+
+    .card-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--accent);
+      margin-bottom: 0.75rem;
+      letter-spacing: 0.1em;
+    }
+
+    .card h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .card p {
+      font-size: 0.9rem;
+      color: var(--text-dim);
+      line-height: 1.6;
+    }
+
+    /* Table */
+    .table-wrap {
+      overflow-x: auto;
+      margin: 2rem 0;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    thead {
+      background: var(--surface2);
+    }
+
+    th {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      padding: 1rem 1.25rem;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 0.85rem 1.25rem;
+      border-top: 1px solid var(--border);
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+    }
+
+    tr:hover td {
+      background: var(--glow);
+      color: var(--text);
+    }
+
+    .ctrl-badge {
+      display: inline-block;
+      padding: 0.15rem 0.6rem;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 0.75rem;
+    }
+
+    .ctrl-p   { background: rgba(255,107,107,0.15); color: var(--accent3); }
+    .ctrl-pd  { background: rgba(74,168,255,0.15); color: var(--accent); }
+    .ctrl-pid { background: rgba(111,221,202,0.15); color: var(--accent2); }
+
+    /* Results */
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+      margin-top: 2rem;
+    }
+
+    .result-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+    }
+
+    .result-card h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .dot-p   { background: var(--accent3); }
+    .dot-pd  { background: var(--accent); }
+    .dot-pid { background: var(--accent2); }
+
+    .result-card p {
+      color: var(--text-dim);
+      font-size: 0.9rem;
+    }
+
+    /* Video */
+    .video-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2.5rem;
+      margin-top: 2rem;
+      text-align: center;
+    }
+
+    .video-section video {
+      width: 100%;
+      max-width: 800px;
+      border-radius: 8px;
+      margin-top: 1.5rem;
+    }
+
+    .video-fallback {
+      margin-top: 1rem;
+      color: var(--text-dim);
+      font-size: 0.85rem;
+    }
+
+    .video-fallback a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .video-fallback a:hover { text-decoration: underline; }
+
+    /* Requirements */
+    .req-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      margin-top: 2rem;
+    }
+
+    @media (max-width: 600px) {
+      .req-grid { grid-template-columns: 1fr; }
+    }
+
+    .req-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.75rem;
+    }
+
+    .req-box h3 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+    }
+
+    .req-box ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .req-box li {
+      font-size: 0.9rem;
+      color: var(--text-dim);
+      padding: 0.35rem 0;
+      padding-left: 1.2rem;
+      position: relative;
+    }
+
+    .req-box li::before {
+      content: '›';
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 3rem 2rem;
+      border-top: 1px solid var(--border);
+      color: var(--text-dim);
+      font-size: 0.85rem;
+    }
+
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    footer a:hover { text-decoration: underline; }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-6px); }
+    }
+
+    .fade-in {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="tag">RAS 550 — Final Project</div>
+    <h1>Closed-Loop <span>DC Motor</span><br />Position Control</h1>
+    <p class="subtitle">Simulink model-based design with real-time Arduino deployment — comparing P, PD, and PID controllers for sinusoidal trajectory tracking.</p>
+    <div class="hero-links">
+      <a href="https://github.com/AByteOfAI/Mechatronics" class="btn btn-primary" target="_blank">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.387.6.113.82-.258.82-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .322.218.694.825.576C20.565 21.795 24 17.298 24 12 24 5.37 18.627 0 12 0z"/></svg>
+        View on GitHub
+      </a>
+      <a href="https://drive.google.com/file/d/1UWXcHq8Mjw7CbyEyw01xvqpLJDn5b8WS/view?usp=sharing" class="btn btn-outline" target="_blank">
+        ▶ Watch Demo
+      </a>
+    </div>
+    <div class="scroll-hint">↓ scroll</div>
+  </header>
+
+  <!-- ARCHITECTURE -->
+  <section class="fade-in">
+    <div class="container">
+      <div class="section-label">01 — Architecture</div>
+      <h2>System Overview</h2>
+      <p>A closed-loop position control system built around a DC motor with quadrature encoder feedback, deployed in real-time on an Arduino via Simulink code generation.</p>
+      <div class="arch-box">
+<pre>
+┌──────────────┐    ┌───────────┐    ┌────────────┐    ┌─────────────┐
+│  Sine Wave   │───▶│   Error   │───▶│ Controller │───▶│ Motor Drive │
+│  Reference   │    │ e = θref  │    │ (P/PD/PID) │    │ PWM + Dir   │
+│  Generator   │    │   − θmeas │    │            │    │ (H-Bridge)  │
+└──────────────┘    └───────────┘    └────────────┘    └──────┬──────┘
+                          ▲                                    │
+                          │         ┌──────────────┐           │
+                          └─────────│  Quadrature  │◀──────────┘
+                                    │   Encoder    │      DC Motor
+                                    └──────────────┘
+</pre>
+      </div>
+
+      <div class="cards">
+        <div class="card">
+          <div class="card-num">01</div>
+          <h3>Reference Generation</h3>
+          <p>Sine wave block producing a configurable position trajectory with adjustable amplitude and frequency.</p>
+        </div>
+        <div class="card">
+          <div class="card-num">02</div>
+          <h3>Encoder Interface</h3>
+          <p>Reads quadrature A/B channels, converts raw counts to degrees or revolutions using gear ratio.</p>
+        </div>
+        <div class="card">
+          <div class="card-num">03</div>
+          <h3>Error Computation</h3>
+          <p>Subtracts measured position from reference: e(t) = θ_ref(t) − θ_meas(t).</p>
+        </div>
+        <div class="card">
+          <div class="card-num">04</div>
+          <h3>PID Controller</h3>
+          <p>Configurable P, PD, or PID with output conditioning (saturation, absolute value) for PWM bounds.</p>
+        </div>
+        <div class="card">
+          <div class="card-num">05</div>
+          <h3>Motor Drive Logic</h3>
+          <p>PWM duty cycle controls speed/torque. Two digital direction pins drive the H-bridge for bidirectional control.</p>
+        </div>
+        <div class="card">
+          <div class="card-num">06</div>
+          <h3>Arduino Deployment</h3>
+          <p>Simulink auto-generates code, compiles, and flashes to the Arduino for real-time closed-loop execution.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONFIGURATIONS -->
+  <section class="fade-in">
+    <div class="container">
+      <div class="section-label">02 — Experiments</div>
+      <h2>Controller Configurations</h2>
+      <p>Nine configurations were tested across P, PD, and PID strategies, varying gains, data types, sample times, and reference frequencies.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Type</th><th>Kp</th><th>Kd</th><th>Ki</th><th>Data</th><th>Ts (s)</th><th>Freq (Hz)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="ctrl-badge ctrl-pd">PD</span></td><td>5</td><td>1.5</td><td>—</td><td>single</td><td>0.01</td><td>0.2</td></tr>
+            <tr><td><span class="ctrl-badge ctrl-pd">PD</span></td><td>9</td><td>1</td><td>—</td><td>single</td><td>0.01</td><td>0.2</td></tr>
+            <tr><td><span class="ctrl-badge ctrl-pd">PD</span></td><td>9</td><td>1</td><td>—</td><td>double</td><td>0.005</td><td>0.2</td></tr>
+            <tr><td><span class="ctrl-badge ctrl-p">P</span></td><td>3</td><td>—</td><td>—</td><td>double</td><td>0.005</td><td>0.2</td></tr>
+            <tr><td><span class="ctrl-badge ctrl-p">P</span></td><td>4</td><td>—</td><td>—</td><td>single</td><td>0.01</td><td>0.1</td></tr>
+            <tr><td><span class="ctrl-badge ctrl-p">P</span></td><td>3</td><td>—</td><td>—</td><td>single</td><td>0.01</td><td>0.1</td></tr>
+            <tr><td><span class="ctrl-badge ctrl-pid">PID</span></td><td>3</td><td>1.5</td><td>0.5</td><td>single</td><td>0.01</td><td>0.1</td></tr>
+            <tr><td><span class="ctrl-badge ctrl-pid">PID</span></td><td>3</td><td>2</td><td>1</td><td>single</td><td>0.01</td><td>0.1</td></tr>
+            <tr><td><span class="ctrl-badge ctrl-pid">PID</span></td><td>3</td><td>2</td><td>1</td><td>double</td><td>0.001</td><td>0.1</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESULTS -->
+  <section class="fade-in">
+    <div class="container">
+      <div class="section-label">03 — Results</div>
+      <h2>Performance Comparison</h2>
+      <div class="results-grid">
+        <div class="result-card">
+          <h3><span class="dot dot-p"></span> P Control</h3>
+          <p>Tracks the general sinusoidal shape but shows significant phase lag and steady-state error, especially at higher reference frequencies.</p>
+        </div>
+        <div class="result-card">
+          <h3><span class="dot dot-pd"></span> PD Control</h3>
+          <p>Derivative action reduces phase lag and sharpens transient response. Higher Kp with moderate Kd produces the tightest trajectory tracking.</p>
+        </div>
+        <div class="result-card">
+          <h3><span class="dot dot-pid"></span> PID Control</h3>
+          <p>Integral action eliminates steady-state error. Best performance at Kp=3, Kd=2, Ki=1 with double precision and Ts=0.001s. Slight overshoot in the negative region.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VIDEO -->
+  <section class="fade-in">
+    <div class="container">
+      <div class="section-label">04 — Demo</div>
+      <h2>Video Demonstration</h2>
+      <div class="video-section">
+        <video controls preload="metadata" poster="">
+          <source src="final.mp4" type="video/mp4" />
+          Your browser does not support video playback.
+        </video>
+        <p class="video-fallback">
+          Video not loading? <a href="https://drive.google.com/file/d/1UWXcHq8Mjw7CbyEyw01xvqpLJDn5b8WS/view?usp=sharing" target="_blank">Watch on Google Drive →</a>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- REQUIREMENTS -->
+  <section class="fade-in">
+    <div class="container">
+      <div class="section-label">05 — Setup</div>
+      <h2>Requirements</h2>
+      <div class="req-grid">
+        <div class="req-box">
+          <h3>Hardware</h3>
+          <ul>
+            <li>Arduino board</li>
+            <li>DC motor with quadrature encoder</li>
+            <li>H-bridge motor driver</li>
+            <li>Encoder A/B channels on digital pins</li>
+            <li>PWM output + 2 direction pins</li>
+          </ul>
+        </div>
+        <div class="req-box">
+          <h3>Software</h3>
+          <ul>
+            <li>MATLAB / Simulink</li>
+            <li>Simulink Support Package for Arduino</li>
+            <li>Simulink Coder</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <p>Abhijit Sinha · RAS 550 Final Project · <a href="https://github.com/AByteOfAI/Mechatronics" target="_blank">github.com/AByteOfAI/Mechatronics</a></p>
+  </footer>
+
+  <script>
+    // Intersection Observer for fade-in
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.12 });
+
+    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+  </script>
+</body>
+</html>
