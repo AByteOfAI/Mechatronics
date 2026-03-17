@@ -9,7 +9,7 @@ This project implements a closed-loop DC motor position control system on an Ard
 
 ## Demo
 
-https://github.com/AByteOfAI/Mechatronics/blob/main/final.mp4
+https://github.com/user-attachments/assets/demo.mp4
 
 > A video demonstration of the motor tracking a sinusoidal reference signal under PID control is included in the repository (`final.mp4`).
 
@@ -81,7 +81,8 @@ https://github.com/AByteOfAI/Mechatronics/blob/main/final.mp4
 
 ## Repository
 
-**GitHub:** [AByteOfAI/Mechatronics](https://github.com/AByteOfAI/Mechatronics)
+**GitHub:** [AByteOfAI/Mechatronics](https://github.com/AByteOfAI/Mechatronics)  
+**Project Page:** [abyteofai.github.io/Mechatronics](https://abyteofai.github.io/Mechatronics/)
 
 ```
 ├── README.md
